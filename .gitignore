@@ -1,6 +1,7 @@
 build/
-testing/
-.cproject
-.project
-bootloader Default.launch
+testing/build/
 .settings/
+
+*.cproject
+*.project
+*.launch
