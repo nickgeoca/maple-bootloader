@@ -3,9 +3,9 @@ maple-bootloader
 
 Bootloader firmware for a Silabs ARM Cortex-M3 development board from Silicon Labs. This code was borrowed from the Leaflabs' maple-bootloader project. The main differences between the two is the removal of the USB files and DFU functionality in this version. The makefile and linker script was rewritten.
 
-This code was designed with porting in mind. Although the STM32 based Maple board has not been tested, it should require minimal coding to function.
+This code was designed with porting in mind. Although the STM32 based Maple board has not been tested, it shouldn't require much more coding to function.
 
-The repo files and bootloader testing are explained below.
+The repo files, bootloader testing, and Precision32 IDE project setup are explained below. 
 
 FILES -------------------------------------------------------------------------
 
@@ -22,3 +22,20 @@ TESTING -----------------------------------------------------------------------
 
 testing/test procedure.txt
   - Use this as a guide to test the bootloader.
+
+Precision32 IDE Project Setup -------------------------------------------------
+maple-bootloader
+  1. Use Git to clone the repository to a folder.
+  2. In Precision32 create a new project.
+    * Select "Makefile Project with Existing Code". 
+	* Select the existing bootloader folder. Under Languages: Unselect C++. Undner Toolchain: Select Code Red MCU Tools. Click finish.
+  3. In the IDE, right click on the project and click properties. 
+    * Click C/C++ build in the left pane.
+	* Under C/C++ build, uncheck "Use default build command" and type "make -f Makefile" under "Build command"
+	* Go to C/C++ Build->MCU settings and click SiM3U167.
+	* Save the changes and exit the properties window by clicking OK.
+  4. In the IDE, right click on the "testing" folder and select properties.
+    * Click C/C++ Build and check "Exclude resource from build".
+	* Click OK to save the changes and exit.
+test-application
+  1. Repeat steps 1 through 3, but reference the testing folder as the source location when creating the project.

@@ -1,12 +1,12 @@
 libmaple-Bootloader Testing
 Silabs Board
 
-This test document is intended to test the functionality of the bootloader. The bootloader must run the application from RAM and Flash. The testing procedure will be described. 
+This test document is intended to test the functionality of the bootloader. The bootloader must run the application from RAM and Flash. The testing procedure is described below. 
 
 Material Required:
  * SI3MU1XX Precision32 UDP MCU Card
  * Silabs debugger
-
+ 
 Prerequisites:
  * Setup config.h. FIRST_STAGE_BOOT will likely needed to be defined if bootloader is not being loaded.
 
