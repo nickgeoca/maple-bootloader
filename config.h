@@ -66,7 +66,7 @@
 //******************************************************************************
 // Uncomment an MCU model
 
-#define BOARD_SIDUINO        // SiLabs Cortex M3
+#define BOARD_SILABS        // SiLabs Cortex M3
 // #define BOARD_MAPLE       // STMicro Cortex M3
 
 #define LED             10
