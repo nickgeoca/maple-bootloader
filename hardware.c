@@ -71,27 +71,33 @@ void setupISRs(void)
 {
     // Disable all interrupts
     u32 i;
-    for (i = 0; i < (sizeof(NVIC->ICER) / sizeof(NVIC->ICER[0])); i++) {
+
+    for (i = 1; i < (sizeof(NVIC->ICER) / sizeof(NVIC->ICER[0])); i++) {
         // Disable interrupt
         NVIC->ICER[i] = 0xFFFFFFFF;
         // Clear pending interrupt
         NVIC->ICPR[i] = 0xFFFFFFFF;
     }
-    // SET_REG(STK_CTRL, 0x04); /* disable the systick, which operates separately from nvic */
+    //SET_REG(STK_CTRL, 0x04); /* disable the systick, which operates separately from nvic */
 }
 
 void systemReset(void) {
 #if defined(ARCH_SI32)
+    SET_REG(XBAR1_CLR, 0x80000000);
+
     // Set all ports as digital inputs
     SET_REG(GPIO_OUTMD_CLR(PORT_BANK0), 0x0000FFFF);
     SET_REG(GPIO_SET(PORT_BANK0), 0x0000FFFF);
     SET_REG(GPIO_MDSEL_SET(PORT_BANK0), 0x0000FFFF);
+
     SET_REG(GPIO_OUTMD_CLR(PORT_BANK1), 0x0000FFFF);
     SET_REG(GPIO_SET(PORT_BANK1), 0x0000FFFF);
     SET_REG(GPIO_MDSEL_SET(PORT_BANK1), 0x0000FFFF);
+
     SET_REG(GPIO_OUTMD_CLR(PORT_BANK2), 0x0000FFFF);
     SET_REG(GPIO_SET(PORT_BANK2), 0x0000FFFF);
     SET_REG(GPIO_MDSEL_SET(PORT_BANK2), 0x0000FFFF);
+
     SET_REG(GPIO_OUTMD_CLR(PORT_BANK3), 0x00007FFF);
     SET_REG(GPIO_SET(PORT_BANK3), 0x00007FFF);
     SET_REG(GPIO_MDSEL_SET(PORT_BANK3), 0x00007FFF);
@@ -187,7 +193,7 @@ void jumpToUser(u32 usrAddr) {
     systemReset(); // resets clocks and periphs, not core regs
 
     // Offset by 4 where Wiring app starts. Add 1 because it will be a thumb instruction.
-    userMain = (funcPtr)(appStart + 4 + 1);
+    userMain = (funcPtr)(*(vu32 *)(appStart + 4));
 
     // set the users stack ptr
     __set_MSP(*(vu32 *)appStart);

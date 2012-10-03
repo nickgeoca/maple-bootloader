@@ -4,6 +4,7 @@
 BUILDDIR = build
 CC = arm-none-eabi-gcc
 OBJ_DUMP = arm-none-eabi-objdump
+OBJCOPY = arm-none-eabi-objcopy
 TARGET = $(BUILDDIR)/si_boot
 SOURCES = main.c hardware.c
 _OBJ =  $(SOURCES:.c=.o)
@@ -53,8 +54,8 @@ post-build: $(TARGET).elf
 	-arm-none-eabi-size "$(TARGET).elf";
 	-@echo ' '
 	$(OBJ_DUMP) -D $(TARGET).elf > $(TARGET)-dump
+	$(OBJCOPY) -O ihex $(TARGET).elf $(TARGET).hex
 	-@echo 'Object dump located in build directory'
-	
 
 .PHONY: all clean dependents
 .SECONDARY: post-build
