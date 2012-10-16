@@ -69,7 +69,7 @@ int main(void)
     // Setup Interrupts
     setupISRs();
 
-    strobePin(PORT_BANK2, LED, STARTUP_BLINKS, BLINK_FAST);
+    strobePin(PORT_BANK3, LED, STARTUP_BLINKS, BLINK_FAST);
 
     if (checkUserCode(USER_CODE_RAM)) {
         jumpToUser(USER_CODE_RAM);
@@ -78,7 +78,7 @@ int main(void)
     }
 
     // some sort of fault occurred, hard reset
-    strobePin(PORT_BANK2, LED, 5, BLINK_FAST);
+    strobePin(PORT_BANK3, LED, 5, BLINK_FAST);
     systemHardReset();
 
 }

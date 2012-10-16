@@ -144,14 +144,8 @@ void setupLED(void) {
     SET_REG(XBAR1_SET, 0x80000000);
 
     // Set LED 3 as push pull output
-    SET_REG(GPIO_OUTMD_SET(PORT_BANK2), 0x00000400);
-    SET_REG(GPIO_MDSEL_SET(PORT_BANK2), 0x00000400);
-
-    // GPIO Port Bank setup
-    // Enable LED 3
-    SET_REG(GPIO_OUTMD_CLR(PORT_BANK2), 0x00000400);
-    SET_REG(GPIO_SET(PORT_BANK2), 0x00000400);
-    SET_REG(GPIO_MDSEL_SET(PORT_BANK2), 0x00000400);
+    SET_REG(GPIO_OUTMD_SET(PORT_BANK3), 0x00000001);
+    SET_REG(GPIO_MDSEL_SET(PORT_BANK3), 0x00000001);
 
 #elif defined(ARC_STM32)
     // todo, swap out hardcoded pin/bank with macro

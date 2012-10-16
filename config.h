@@ -69,7 +69,7 @@
 #define BOARD_SILABS        // SiLabs Cortex M3
 // #define BOARD_MAPLE       // STMicro Cortex M3
 
-#define LED             10
+#define LED             0
 
 #if defined(BOARD_MAPLE)
 // LED location
