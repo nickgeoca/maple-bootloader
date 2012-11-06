@@ -83,7 +83,7 @@ void setupISRs(void)
 
 void systemReset(void) {
 #if defined(ARCH_SI32)
-    SET_REG(XBAR1_CLR, 0x80000000);
+    SET_REG(XBAR1_SET, 0x80000000);
 
     // Set all ports as digital inputs
     SET_REG(GPIO_OUTMD_CLR(PORT_BANK0), 0x0000FFFF);

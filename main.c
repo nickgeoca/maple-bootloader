@@ -59,11 +59,12 @@ int main(void)
     // Setup global/static variables
     setupGlobals();
 
+    // Setup peripherals
+    setupCLK();
+
     // Reset peripherals, but not pc
     systemReset();
 
-    // Setup peripherals
-    setupCLK();
     setupLED();
 
     // Setup Interrupts

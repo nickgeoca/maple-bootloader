@@ -6,7 +6,7 @@ CC = arm-none-eabi-gcc
 OBJ_DUMP = arm-none-eabi-objdump
 OBJCOPY = arm-none-eabi-objcopy
 TARGET = $(BUILDDIR)/si_boot
-SOURCES = main.c hardware.c
+SOURCES = main.c hardware.c dfu.c
 _OBJ =  $(SOURCES:.c=.o)
 OBJS = $(patsubst %, $(BUILDDIR)/%,$(_OBJ))
 
