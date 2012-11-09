@@ -37,11 +37,12 @@
 #define CLKCTRL_0  ((uint32_t)0x4002D000)
 #define APBCLKG0_SET (CLKCTRL_0 + 0x24)
 #define APBCLKG0_CLR (CLKCTRL_0 + 0x28)
+#define APBCLKG1_SET (CLKCTRL_0 + 0x34)
 
 #define PBCFG_0         ((uint32_t)0x4002A000)
 #define XBAR1_SET       (PBCFG_0 + 0x44)
 #define XBAR1_CLR       (PBCFG_0 + 0x48)
-
+#define XBAR0H_SET      (PBCFG_0 + 0x34)
 // Port bank locations
 #define PORT_BANK0 ((uint32_t)0x4002A0A0)
 #define PORT_BANK1 ((uint32_t)0x4002A140)

@@ -6,13 +6,13 @@ CC = arm-none-eabi-gcc
 OBJ_DUMP = arm-none-eabi-objdump
 OBJCOPY = arm-none-eabi-objcopy
 TARGET = $(BUILDDIR)/si_boot
-SOURCES = main.c hardware.c dfu.c
+SOURCES = main.c hardware.c stk500.c
 _OBJ =  $(SOURCES:.c=.o)
 OBJS = $(patsubst %, $(BUILDDIR)/%,$(_OBJ))
 
 LINKSCRIPT = arch/arm_m3/sim3u167.ld
 # Compiler Flags
-CFLAGS = -nostdlib
+CFLAGS = -nostdlib -g3
 CFLAGS += -Xlinker -Map="$(TARGET).map"
 CFLAGS += -Xlinker --gc-sections
 CFLAGS += -mcpu=cortex-m3 -mthumb

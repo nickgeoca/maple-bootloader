@@ -50,8 +50,8 @@
 //******************************************************************************
 // Memory Locations
 //******************************************************************************
-#define USER_CODE_RAM_OFFSET   5120
-#define USER_CODE_FLASH_OFFSET 5120
+#define USER_CODE_RAM_OFFSET   7168
+#define USER_CODE_FLASH_OFFSET USER_CODE_RAM_OFFSET
 
 //******************************************************************************
 // IDs

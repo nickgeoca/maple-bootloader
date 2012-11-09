@@ -83,6 +83,17 @@ void setupISRs(void)
 
 void systemReset(void) {
 #if defined(ARCH_SI32)
+    // Turn off watchdog
+    *((vu32*)0x4002D020) = 0;
+    SET_REG(APBCLKG1_SET, 0x00000002);
+    *((vu32*)0x40030030) = 0xA5;
+    *((vu32*)0x40030030) = 0xDD;
+
+
+    // Enable APB clock to Port Bank Modules
+    SET_REG(APBCLKG0_SET, 0x00000002);
+
+    SET_REG(XBAR1_SET, 0x80000000);
     SET_REG(XBAR1_SET, 0x80000000);
 
     // Set all ports as digital inputs
@@ -113,35 +124,12 @@ void systemReset(void) {
 #endif // defined(ARCH_STM32)
 }
 
-void setupCLK(void)
-{
-#if defined(ARCH_SI32)
-    // Enable APB clock to Port Bank Modules
-    SET_REG(APBCLKG0_SET, 0x00000002);
-
-#elif defined(ARC_STM32)
-    /* enable HSE */
-    SET_REG(RCC_CR, GET_REG(RCC_CR) | 0x00010001);
-    while ((GET_REG(RCC_CR) & 0x00020000) == 0); /* for it to come on */
-
-    /* enable flash prefetch buffer */
-    SET_REG(FLASH_ACR, 0x00000012);
-
-    /* Configure PLL */
-    SET_REG(RCC_CFGR, GET_REG(RCC_CFGR) | 0x001D0400); /* pll=72Mhz,APB1=36Mhz,AHB=72Mhz */
-    SET_REG(RCC_CR, GET_REG(RCC_CR)     | 0x01000000); /* enable the pll */
-    while ((GET_REG(RCC_CR) & 0x03000000) == 0);         /* wait for it to come on */
-
-    /* Set SYSCLK as PLL */
-    SET_REG(RCC_CFGR, GET_REG(RCC_CFGR) | 0x00000002);
-    while ((GET_REG(RCC_CFGR) & 0x00000008) == 0); /* wait for it to come on */
-#endif // defined(ARCH_SI32)
-}
 
 void setupLED(void) {
 #if defined(ARCH_SI32)
     // Enable Crossbar 1 to use LED
     SET_REG(XBAR1_SET, 0x80000000);
+    SET_REG(XBAR0H_SET, 0x80000000);
 
     // Set LED 3 as push pull output
     SET_REG(GPIO_OUTMD_SET(PORT_BANK3), 0x00000001);

@@ -26,12 +26,12 @@ MEMORY
 {
   /* Define each memory region */
 
-  /* Bootloader gets two 1024 byte flash pages */
+  /* Bootloader gets seven 1024 byte flash pages */
   FLASH (rx) : ORIGIN = 0, LENGTH = 0x3fffc 
   RAM (rwx) : ORIGIN = 0x20000000, LENGTH = 0x8000 /* 32k */
 }
   __top_RAM = 0x20000000 + 0x8000;
-__wiring_code_start = 5120;
+__wiring_code_start = 7168;
 
 SECTIONS
 {

@@ -53,14 +53,11 @@ void (* const g_pfnVectors[])(void) = {
     main
 };
 #endif
-
+void stk500v2(void);
 int main(void)
 {
     // Setup global/static variables
     setupGlobals();
-
-    // Setup peripherals
-    setupCLK();
 
     // Reset peripherals, but not pc
     systemReset();
@@ -70,7 +67,8 @@ int main(void)
     // Setup Interrupts
     setupISRs();
 
-    strobePin(PORT_BANK3, LED, STARTUP_BLINKS, BLINK_FAST);
+    //strobePin(PORT_BANK3, LED, STARTUP_BLINKS, BLINK_FAST);
+    stk500v2();
 
     if (checkUserCode(USER_CODE_RAM)) {
         jumpToUser(USER_CODE_RAM);
