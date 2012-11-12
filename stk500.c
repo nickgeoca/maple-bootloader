@@ -489,7 +489,7 @@ void stk500v2(void)
     int32_t ctr = 0;
     boot_timer  =   0;
     boot_state  =   0;
-    boot_timeout    =   500000; // 7 seconds , approx 2us per step when optimize "s"
+    boot_timeout    =   1000000; // 7 seconds , approx 2us per step when optimize "s"
 
     /*
      * Branch to bootloader or application code ?
