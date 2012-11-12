@@ -31,7 +31,7 @@ MEMORY
   RAM (rwx) : ORIGIN = 0x20000000, LENGTH = 0x8000 /* 32k */
 }
   __top_RAM = 0x20000000 + 0x8000;
-__wiring_code_start = 7168;
+
 
 SECTIONS
 {
@@ -44,11 +44,8 @@ SECTIONS
 	
 	.text : ALIGN(4)
 	{
-		. = 3072 - SIZEOF(.isr_vector);
-		__bootloader_start = .;
-		
-		/* Start of wiring program */
-		LONG(__wiring_code_start);
+		. = SIZEOF(.isr_vector);
+
 		/* Bootloader code  */
 		*(.text)
 		*(.text*)
@@ -71,12 +68,12 @@ SECTIONS
 		LONG(    ADDR(.bss));
 		LONG(  SIZEOF(.bss));
 		__bss_section_table_end = .;
-		__section_table_end = . ;
-		
-		KEEP(*(.text))
-	} > FLASH
-	
+		__section_table_end = .;
 
+		KEEP(*(.text))
+
+	} > FLASH
+		
 	/* Initialized RW data flashed, but referenced in RAM */
 	.data : ALIGN(4)
 	{
@@ -103,7 +100,6 @@ SECTIONS
 	
 	PROVIDE(_pvHeapStart = .);
 	PROVIDE(_vStackTop = __top_RAM - 0);
-	PROVIDE(_bootloader_start = __bootloader_start);
 	
 	DISCARD :
 	{

@@ -53,6 +53,7 @@ void (* const g_pfnVectors[])(void) = {
     main
 };
 #endif
+
 void stk500v2(void);
 int main(void)
 {
@@ -67,13 +68,14 @@ int main(void)
     // Setup Interrupts
     setupISRs();
 
-    //strobePin(PORT_BANK3, LED, STARTUP_BLINKS, BLINK_FAST);
+    // Run stk500v2 to upload flash.
     stk500v2();
 
-    if (checkUserCode(USER_CODE_RAM)) {
-        jumpToUser(USER_CODE_RAM);
-    } else if (checkUserCode(USER_CODE_FLASH)) {
-        jumpToUser(USER_CODE_FLASH);
+    //if (checkUserCode(USER_CODE_RAM_OFFSET)) {
+     //   jumpToUser(USER_CODE_RAM_OFFSET);
+    //} else
+    if (checkUserCode(USER_CODE_FLASH_OFFSET)) {
+        jumpToUser(USER_CODE_FLASH_OFFSET);
     }
 
     // some sort of fault occurred, hard reset
@@ -81,7 +83,6 @@ int main(void)
     systemHardReset();
 
 }
-
 //
 // Copy the data sections from flash to SRAM.
 //

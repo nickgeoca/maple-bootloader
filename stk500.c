@@ -160,82 +160,7 @@ typedef uint32_t address_t;
 static void sendchar(char c);
 static unsigned char recchar(void);
 
-//*****************************************************************************
-// erase page in flash
-typedef struct flash_reg_map {
-   volatile uint32_t  CFGR;
-   volatile uint32_t  CFGR_SET;
-   volatile uint32_t  CFGR_CLR;
-   uint32_t       reserved0[37];
-   volatile uint32_t  WRADDRR;
-   uint32_t       reserved1[3];
-   volatile uint32_t  WRDATAR;
-   uint32_t       reserved2[3];
-   volatile uint32_t  KEYR;
-   uint32_t       reserved3[3];
-   volatile uint32_t  TCR;
-} flash_reg_map;
-#define FLASH_BASE ((struct flash_reg_map*)0x4002E000)
-static inline void _flash_unlock_multi(void)
-{
-    // Enable vdd suply monitor and set as reset source
-    (*(volatile uint32_t*)((uint32_t)&(*(volatile uint32_t*)0x4002F000) + (4 << !(1)))) = (0x80000000);
-    (*(volatile uint32_t*)((uint32_t)&(*(volatile uint32_t*)0x4002D060) + (4 << !(1)))) = (0x00000004);
 
-
-    FLASH_BASE->KEYR = 165;
-    FLASH_BASE->KEYR = 242;
-}
-
-static inline void _flash_lock_multi(void)
-{
-    FLASH_BASE->KEYR = 90;
-}
-void boot_page_erase(uint32_t eraseAddress)
-{
-    // Enable flash erase
-    (*(volatile uint32_t*)((uint32_t)&(FLASH_BASE->CFGR) + (4 << !(1)))) = ((1 << 18));
-
-    // Unlock flash for multiple write
-    _flash_unlock_multi();
-
-    // Set address register
-    FLASH_BASE->WRADDRR = eraseAddress;
-
-    // Erase page
-    FLASH_BASE->WRDATAR = 0;
-
-    // Lock
-    _flash_lock_multi();
-
-    // Disable erase mode
-    (*(volatile uint32_t*)((uint32_t)&(FLASH_BASE->CFGR) + (4 << !(0)))) = ((1 << 18));
-}
-
-void flash_write_data(uint32_t address, uint16_t data[], int32_t count)
-{
-    uint32_t up_count;
-
-    // Unlock flash for multiple write
-    _flash_unlock_multi();
-
-
-    // Set address register
-    FLASH_BASE->WRADDRR = address;
-
-    for (up_count = 0; up_count != count; up_count++) {
-        FLASH_BASE->WRDATAR = data[up_count];
-    }
-
-    _flash_lock_multi();
-}
-void init_flashctrl(void)
-{
-    // set flash control clock
-    (*(volatile uint32_t*)((uint32_t)0x4002D020 + (4 << !(1)))) = (1 << 30);
-}
-
-//*****************************************************************************
 #define SIM3_DELAY_US_MULT (7 * F_CPU / 1000000 / 20)
 
 static void delay_us(uint32_t us) {
@@ -296,16 +221,47 @@ typedef struct usart_reg_map
 } usart_reg_map;
 
 #define USART0_BASE ((usart_reg_map*)0x40000000)
-#define TRACE_CHAR(c)   do { \
-                            *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
-                            *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\r'; \
-                            *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\n'; \
-                            while (0x00070000 & USART0_BASE->FIFOCN); \
-                        } while (0);
-#define TRACE_SNGL_CHAR(c)   do { \
-                            *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
-                            while (0x00070000 & USART0_BASE->FIFOCN); \
-                        } while (0);
+#define TRACE_CHAR(c) (c)
+#define TRACE_CHAR_(c) do { \
+        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
+        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\r'; \
+        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\n'; \
+        while (0x00070000 & USART0_BASE->FIFOCN); \
+    } while (0);
+
+#define TRACE_MEM_P(addr, data) (addr, data)
+#define TRACE_MEM_P_(addr, data) do { \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 28) & 0xf) + ((((addr >> 28) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 24) & 0xf) + ((((addr >> 24) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 20) & 0xf) + ((((addr >> 20) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 16) & 0xf) + ((((addr >> 16) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 12) & 0xf) + ((((addr >> 12) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 8) & 0xf) + ((((addr >> 8) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 4) & 0xf) + ((((addr >> 4) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 0) & 0xf) + ((((addr >> 0) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)':'; \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)' '; \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 12) & 0xf) + ((((data >> 12) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 8) & 0xf) + ((((data >> 8) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 4) & 0xf) + ((((data >> 4) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 0) & 0xf) + ((((data >> 0) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\r'; \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\n'; \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                } while (0);
+#define TRACE_SNGL_CHAR(c)   (c)
+#define TRACE_SNGL_CHAR_(c) do { \
+                                *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
+                                while (0x00070000 & USART0_BASE->FIFOCN); \
+                            } while (0)
 void INIT_TRACE(void)
 {
     uint32_t baud;
@@ -389,7 +345,86 @@ static void sendchar(char c)
 
 }
 /////////////
+//*****************************************************************************
+// erase page in flash
+typedef struct flash_reg_map {
+   volatile uint32_t  CFGR;
+   volatile uint32_t  CFGR_SET;
+   volatile uint32_t  CFGR_CLR;
+   uint32_t       reserved0[37];
+   volatile uint32_t  WRADDRR;
+   uint32_t       reserved1[3];
+   volatile uint32_t  WRDATAR;
+   uint32_t       reserved2[3];
+   volatile uint32_t  KEYR;
+   uint32_t       reserved3[3];
+   volatile uint32_t  TCR;
+} flash_reg_map;
+#define FLASH_BASE ((struct flash_reg_map*)0x4002E000)
+static inline void _flash_unlock_multi(void)
+{
+    // Enable vdd suply monitor and set as reset source
+    (*(volatile uint32_t*)((uint32_t)&(*(volatile uint32_t*)0x4002F000) + (4 << !(1)))) = (0x80000000);
+    (*(volatile uint32_t*)((uint32_t)&(*(volatile uint32_t*)0x4002D060) + (4 << !(1)))) = (0x00000004);
 
+
+    FLASH_BASE->KEYR = 165;
+    FLASH_BASE->KEYR = 242;
+}
+
+static inline void _flash_lock_multi(void)
+{
+    FLASH_BASE->KEYR = 90;
+}
+void boot_page_erase(uint32_t eraseAddress)
+{
+    // Enable flash erase
+    (*(volatile uint32_t*)((uint32_t)&(FLASH_BASE->CFGR) + (4 << !(1)))) = ((1 << 18));
+
+    // Unlock flash for multiple write
+    _flash_unlock_multi();
+
+    // Set address register
+    FLASH_BASE->WRADDRR = eraseAddress;
+
+    // Erase page
+    FLASH_BASE->WRDATAR = 0;
+
+    // Lock
+    _flash_lock_multi();
+
+    // Disable erase mode
+    (*(volatile uint32_t*)((uint32_t)&(FLASH_BASE->CFGR) + (4 << !(0)))) = ((1 << 18));
+    while (FLASH_BASE->CFGR & (1 << 20));
+}
+
+void flash_write_data(uint32_t address, uint16_t data[], int32_t count)
+{
+    uint32_t up_count;
+    uint32_t i2;
+    // Unlock flash for multiple write
+    _flash_unlock_multi();
+
+
+    // Set address register
+    FLASH_BASE->WRADDRR = address;
+    while (FLASH_BASE->CFGR & (1 << 20));
+    for (up_count = 0; up_count != count; up_count++) {
+        FLASH_BASE->WRDATAR = data[up_count];
+        TRACE_MEM_P(address, data[up_count]);
+        address += 2;
+        while (FLASH_BASE->CFGR & (1 << 19));
+    }
+    _flash_lock_multi();
+}
+void init_flashctrl(void)
+{
+    // set flash control clock
+    (*(volatile uint32_t*)((uint32_t)0x4002D020 + (4 << !(1)))) = (1 << 30);
+    FLASH_BASE->CFGR |= (1 << 6) | 7;
+}
+
+//*****************************************************************************
 //************************************************************************
 static int  Serial_Available(void)
 {
@@ -413,12 +448,14 @@ static unsigned char recchar(void)
 static unsigned char recchar_timeout(void)
 {
 uint32_t count = 0;
+
     while (!(0x7 & UART1_BASE->FIFOCN))
     {
         // wait for data
         count++;
         if (count > MAX_TIME_COUNT)
         {
+
         unsigned int    data;
             if (checkUserCode(USER_CODE_FLASH)) {
                     jumpToUser(USER_CODE_FLASH);
@@ -434,8 +471,8 @@ uint32_t count = 0;
 //*****************************************************************************
 void stk500v2(void)
 {
-    address_t       address         =   0;
-    address_t       eraseAddress    =   0;
+    address_t       address         =   (address_t)APP_BEGIN;
+    address_t       eraseAddress    =   address;
     unsigned char   msgParseState;
     unsigned int    i              =   0;
     unsigned char   checksum        =   0;
@@ -449,17 +486,18 @@ void stk500v2(void)
     unsigned long   boot_timer;
     unsigned int    boot_state;
 
-
+    int32_t ctr = 0;
     boot_timer  =   0;
     boot_state  =   0;
-    boot_timeout    =   20000000; // 7 seconds , approx 2us per step when optimize "s"
+    boot_timeout    =   500000; // 7 seconds , approx 2us per step when optimize "s"
 
     /*
      * Branch to bootloader or application code ?
      */
 
+
     // init uart0
-    init_uart1();;
+    init_uart1();
     init_flashctrl();
     INIT_TRACE();
 
@@ -476,8 +514,9 @@ void stk500v2(void)
             if (boot_timer > boot_timeout)
             {
                 boot_state  =   1; // (after ++ -> boot_state=2 bootloader timeout, jump to main 0x00000 )
+
             }
-            if ((boot_timer % 20000) == 0)
+            if ((boot_timer % 10000) == 0)
             {
                 //* toggle the LED
                 *(volatile uint32_t*)(0x4002A320 + 12) =  ((1 << 0) << 16) | (~(*(volatile uint32_t *)0x4002A320) & 0xFFFF);
@@ -745,7 +784,7 @@ void stk500v2(void)
 
                 case CMD_CHIP_ERASE_ISP:
                     TRACE_CHAR('6');
-                    eraseAddress    =   0;
+                    eraseAddress    =   APP_BEGIN;
                     msgLength       =   2;
                     msgBuffer[1]    =   STATUS_CMD_OK;
                     break;
@@ -760,14 +799,14 @@ void stk500v2(void)
                     TRACE_SNGL_CHAR('0');
                     TRACE_SNGL_CHAR('x');
                        while (ld_adr_tmp < 5) {
-                           TRACE_SNGL_CHAR((msgBuffer[ld_adr_tmp] >> 4) + (msgBuffer[ld_adr_tmp] >> 4 > 9 ? 0x31-10: 0) + 0x30);
-                           TRACE_SNGL_CHAR((msgBuffer[ld_adr_tmp] & 0xf) + (msgBuffer[ld_adr_tmp] & 0xf > 9 ? 0x31-10: 0) + 0x30);
+                           TRACE_SNGL_CHAR((msgBuffer[ld_adr_tmp] >> 4) + ((msgBuffer[ld_adr_tmp] >> 4) > 9 ? 0x31-10: 0) + 0x30);
+                           TRACE_SNGL_CHAR((msgBuffer[ld_adr_tmp] & 0xf) + ((msgBuffer[ld_adr_tmp] & 0xf) > 9 ? 0x31-10: 0) + 0x30);
 
                           ld_adr_tmp += 1;
                        }
                        TRACE_CHAR(' ');
-                    address =   ( ((address_t)(msgBuffer[1])<<24)|((address_t)(msgBuffer[2])<<16)|((address_t)(msgBuffer[3])<<8)|(msgBuffer[4]) )<<1;
-                    address = 0x1c00;
+                    //address =   ( ((address_t)(msgBuffer[1])<<24)|((address_t)(msgBuffer[2])<<16)|((address_t)(msgBuffer[3])<<8)|(msgBuffer[4]) )<<1;
+                    //address = (address_t)APP_BEGIN;
                     msgLength       =   2;
                     msgBuffer[1]    =   STATUS_CMD_OK;
 
@@ -789,13 +828,13 @@ void stk500v2(void)
                         if ( msgBuffer[0] == CMD_PROGRAM_FLASH_ISP )
                         {
                             // erase only main section (bootloader protection)
-                            if (eraseAddress >= APP_BEGIN)
+                            if (eraseAddress >= APP_BEGIN && eraseAddress < (SPM_PAGESIZE * 256))
                             {
                                 boot_page_erase(eraseAddress);  // Perform page erase
                                 eraseAddress += SPM_PAGESIZE;   // point to next page to be erase
                             }
 
-                            flash_write_data(address, (uint16_t*)msgBuffer, size / 2);
+                            flash_write_data(address, (uint16_t*)p, size / 2);
                             address += size;
                         }
                         msgLength   =   2;
@@ -811,7 +850,11 @@ void stk500v2(void)
                         unsigned int    size    =   ((msgBuffer[1])<<8) | msgBuffer[2];
                         unsigned char   *p      =   msgBuffer+1;
                         msgLength               =   size+3;
-
+                        static uint8_t read_state = 0;
+                        if (!read_state) {
+                            address = APP_BEGIN;
+                        }
+                        read_state = 1;
                         *p++    =   STATUS_CMD_OK;
                         if (msgBuffer[0] == CMD_READ_FLASH_ISP )
                         {

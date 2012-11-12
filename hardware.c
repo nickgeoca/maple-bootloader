@@ -78,7 +78,8 @@ void setupISRs(void)
         // Clear pending interrupt
         NVIC->ICPR[i] = 0xFFFFFFFF;
     }
-    //SET_REG(STK_CTRL, 0x04); /* disable the systick, which operates separately from nvic */
+    // Disable systick
+    *((vu32*)0xE000E010UL) &= 0xFFFFFFFE;
 }
 
 void systemReset(void) {

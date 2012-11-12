@@ -12,7 +12,7 @@ OBJS = $(patsubst %, $(BUILDDIR)/%,$(_OBJ))
 
 LINKSCRIPT = arch/arm_m3/sim3u167.ld
 # Compiler Flags
-CFLAGS = -nostdlib -g3
+CFLAGS = -nostdlib -Os
 CFLAGS += -Xlinker -Map="$(TARGET).map"
 CFLAGS += -Xlinker --gc-sections
 CFLAGS += -mcpu=cortex-m3 -mthumb

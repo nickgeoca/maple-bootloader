@@ -38,7 +38,7 @@
 //******************************************************************************
 #define BLINK_FAST      0x50000
 #define BLINK_SLOW      0x100000
-#define STARTUP_BLINKS  5
+#define STARTUP_BLINKS  3
 
 //******************************************************************************
 // Bootloader
@@ -50,8 +50,11 @@
 //******************************************************************************
 // Memory Locations
 //******************************************************************************
-#define USER_CODE_RAM_OFFSET   7168
-#define USER_CODE_FLASH_OFFSET USER_CODE_RAM_OFFSET
+#define PAGE_SIZE 1024
+extern unsigned int __section_table_end;
+#define _END_FLASH_ ((unsigned int)(&__section_table_end))
+#define USER_CODE_FLASH_OFFSET (((unsigned int)_END_FLASH_ / (unsigned int)PAGE_SIZE) * (unsigned int)PAGE_SIZE + (_END_FLASH_ % PAGE_SIZE? PAGE_SIZE: 0))
+#define USER_CODE_RAM_OFFSET   (USER_CODE_FLASH_OFFSET + 0x20000000)
 
 //******************************************************************************
 // IDs
