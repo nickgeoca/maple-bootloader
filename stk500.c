@@ -80,17 +80,24 @@ LICENSE:
 //* Aug 23, 2010    <MLS> Added support for atmega2561
 //* Aug 26, 2010    <MLS> Removed support for BOOT_BY_SWITCH
 //* Sep  8, 2010    <MLS> Added support for atmega16
+//* Sep  8, 2010    <NKG> = Nick Geoca nickgeoca@gmail.com
+//* Dec 18, 2012    <NKG> Added support for SiM3U167
 //************************************************************************
 
 
-
+//**************************************************************************************************
+// Includes
+//**************************************************************************************************
 #include    <inttypes.h>
 #include    <stdlib.h>
 #include    "command.h"
 #include    "common.h"
-/*
- * Uncomment the following lines to save code space
- */
+
+//**************************************************************************************************
+// Defines
+//**************************************************************************************************
+
+//#define USE_TRACE
 
 #define SPM_PAGESIZE 1024
 
@@ -134,11 +141,6 @@ LICENSE:
 
 
 /*
- * Macro to calculate UBBR from XTAL and baudrate
- */
-
-
-/*
  * States used in the receive state machine
  */
 #define ST_START        0
@@ -161,6 +163,9 @@ static void sendchar(char c);
 static unsigned char recchar(void);
 
 
+//**************************************************************************************************
+// delay functions
+//**************************************************************************************************
 #define SIM3_DELAY_US_MULT (7 * F_CPU / 1000000 / 20)
 
 static void delay_us(uint32_t us) {
@@ -186,10 +191,9 @@ void delay_ms(unsigned int timedelay)
     }
 }
 
-
-
-
-/////////////
+//**************************************************************************************************
+// UART
+//**************************************************************************************************
 typedef struct usart_reg_map
 {
     volatile uint32_t  CONFIG; // Base Address + 0x0
@@ -220,81 +224,48 @@ typedef struct usart_reg_map
     uint32_t       reserved7[3];
 } usart_reg_map;
 
-#define USART0_BASE ((usart_reg_map*)0x40000000)
-#define TRACE_CHAR(c) (c)
-#define TRACE_CHAR_(c) do { \
-        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
-        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\r'; \
-        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\n'; \
-        while (0x00070000 & USART0_BASE->FIFOCN); \
-    } while (0);
 
-#define TRACE_MEM_P(addr, data) (addr, data)
-#define TRACE_MEM_P_(addr, data) do { \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 28) & 0xf) + ((((addr >> 28) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 24) & 0xf) + ((((addr >> 24) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 20) & 0xf) + ((((addr >> 20) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 16) & 0xf) + ((((addr >> 16) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 12) & 0xf) + ((((addr >> 12) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 8) & 0xf) + ((((addr >> 8) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 4) & 0xf) + ((((addr >> 4) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 0) & 0xf) + ((((addr >> 0) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)':'; \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)' '; \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 12) & 0xf) + ((((data >> 12) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 8) & 0xf) + ((((data >> 8) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 4) & 0xf) + ((((data >> 4) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 0) & 0xf) + ((((data >> 0) & 0xf) > 9) ? 0x61-10: 0x30)); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\r'; \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\n'; \
-                                    while (0x00070000 & USART0_BASE->FIFOCN); \
-                                } while (0);
-#define TRACE_SNGL_CHAR(c)   (c)
-#define TRACE_SNGL_CHAR_(c) do { \
-                                *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
-                                while (0x00070000 & USART0_BASE->FIFOCN); \
-                            } while (0)
-void INIT_TRACE(void)
-{
-    uint32_t baud;
-
-    // setup crossbar
-    (*(volatile uint32_t*)((uint32_t)0x4002A020 + (4 << !(1)))) = (1 << 0);
-
-    // Gpio rx (already configured as input)
-    //Gpio tx
-    (*(volatile uint32_t*)((uint32_t)0x4002A0E0 + (4 << !(1)))) = (1);
-
-    // set usart clock
-    (*(volatile uint32_t*)((uint32_t)0x4002D020 + (4 << !(1)))) = (1 << 2);
-
-    // tx configuration
-    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(0)))) = (0x07000000 | 0x00020000 | 0x00180000 | 0x40000000);
-    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(1)))) = ((3 << 24) | (1 << 16) | (1 << 18) | (1 << 19));
-    // rx configuration
-    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(0)))) = (0x00000700 | 0x00000018 | 0x00004000);
-    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(1)))) = ((3 << 8) | (1 << 0) | (1 << 2) | (1 << 3));
-
-    // Full duplex
-    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->MODE) + (4 << !(0)))) = (0x08000000);
-
-    // Set baud rate. Should use apb frequency, but the apb frequency will always be cpu freqency in bootloader.
-    baud = F_CPU / (2 * BAUDRATE) - 1;
-    USART0_BASE->B_RATE = baud | (baud << 16);
-
-    // Enable USART
-    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONTROL) + (4 << !(1)))) = ((1 << 15) | (1U << 31));
-}
 #define UART1_BASE ((usart_reg_map*)0x40003000)
+
 static void sendchar(char c);
+static int  Serial_Available(void)
+{
+    return 0x7 & UART1_BASE->FIFOCN;
+}
+
+
+// Read single byte from USART, block if no data available
+static unsigned char recchar(void)
+{
+    //block until char available;
+    while (!(0x7 & UART1_BASE->FIFOCN)) ;
+    return *(volatile uint8_t*)(&UART1_BASE->DATA);
+}
+
+#define MAX_TIME_COUNT  (F_CPU >> 1)
+
+static unsigned char recchar_timeout(void)
+{
+uint32_t count = 0;
+
+    while (!(0x7 & UART1_BASE->FIFOCN))
+    {
+        // wait for data
+        count++;
+        if (count > MAX_TIME_COUNT)
+        {
+
+        unsigned int    data;
+            if (checkUserCode(USER_CODE_FLASH)) {
+                    jumpToUser(USER_CODE_FLASH);
+            }
+            count   =   0;
+        }
+    }
+    return *(volatile uint8_t*)(&UART1_BASE->DATA);
+}
+
+
 void init_uart1(void)
 {
     uint32_t baud;
@@ -331,10 +302,7 @@ void init_uart1(void)
     (*(volatile uint32_t*)((uint32_t)&(UART1_BASE->CONTROL) + (4 << !(1)))) = ((1 << 15) | (1U << 31));
 }
 
-//*****************************************************************************
-/*
- * send single byte to USART, wait until transmission is completed
- */
+// send single byte to USART, wait until transmission is completed
 static void sendchar(char c)
 {
     // send char
@@ -344,9 +312,100 @@ static void sendchar(char c)
     while (0x00070000 & UART1_BASE->FIFOCN);
 
 }
-/////////////
-//*****************************************************************************
-// erase page in flash
+
+//**************************************************************************************************
+// Trace Functions
+//**************************************************************************************************
+#if !defined(USE_TRACE)
+#define TRACE_CHAR(c) (c)
+#define TRACE_MEM_P(addr, data) (addr, data)
+#define TRACE_SNGL_CHAR(c)   (c)
+#define TRACE_STRING(s) (s)
+void INIT_TRACE(void) {;}
+#else // !defined(USE_TRACE)
+#define USART0_BASE ((usart_reg_map*)0x40000000)
+
+#define TRACE_CHAR(c) do { \
+        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
+        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\r'; \
+        *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\n'; \
+        while (0x00070000 & USART0_BASE->FIFOCN); \
+    } while (0);
+#define TRACE_MEM_P(addr, data) do { \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 28) & 0xf) + ((((addr >> 28) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 24) & 0xf) + ((((addr >> 24) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 20) & 0xf) + ((((addr >> 20) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 16) & 0xf) + ((((addr >> 16) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 12) & 0xf) + ((((addr >> 12) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 8) & 0xf) + ((((addr >> 8) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 4) & 0xf) + ((((addr >> 4) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((addr >> 0) & 0xf) + ((((addr >> 0) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)':'; \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)' '; \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 12) & 0xf) + ((((data >> 12) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 8) & 0xf) + ((((data >> 8) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 4) & 0xf) + ((((data >> 4) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)(((data >> 0) & 0xf) + ((((data >> 0) & 0xf) > 9) ? 0x61-10: 0x30)); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\r'; \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                    *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)'\n'; \
+                                    while (0x00070000 & USART0_BASE->FIFOCN); \
+                                } while (0);
+#define TRACE_SNGL_CHAR(c) do {                                                         \
+                                *((volatile uint8_t *)&USART0_BASE->DATA) = (uint8_t)c; \
+                                while (0x00070000 & USART0_BASE->FIFOCN);               \
+                            } while (0)
+#define TRACE_STRING(s) do {                                                    \
+                            char *tmp = s - 1;                                      \
+                            while (*(++tmp) != 0) TRACE_SNGL_CHAR(*tmp);        \
+                            TRACE_CHAR(' ');                                    \
+                        } while (0)
+void INIT_TRACE(void)
+{
+    uint32_t baud;
+
+    // setup crossbar
+    (*(volatile uint32_t*)((uint32_t)0x4002A020 + (4 << !(1)))) = (1 << 0);
+
+    // Gpio rx (already configured as input)
+    //Gpio tx
+    (*(volatile uint32_t*)((uint32_t)0x4002A0E0 + (4 << !(1)))) = (1);
+
+    // set usart clock
+    (*(volatile uint32_t*)((uint32_t)0x4002D020 + (4 << !(1)))) = (1 << 2);
+
+    // tx configuration
+    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(0)))) = (0x07000000 | 0x00020000 | 0x00180000 | 0x40000000);
+    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(1)))) = ((3 << 24) | (1 << 16) | (1 << 18) | (1 << 19));
+    // rx configuration
+    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(0)))) = (0x00000700 | 0x00000018 | 0x00004000);
+    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONFIG) + (4 << !(1)))) = ((3 << 8) | (1 << 0) | (1 << 2) | (1 << 3));
+
+    // Full duplex
+    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->MODE) + (4 << !(0)))) = (0x08000000);
+
+    // Set baud rate. Should use apb frequency, but the apb frequency will always be cpu freqency in bootloader.
+    baud = F_CPU / (2 * BAUDRATE) - 1;
+    USART0_BASE->B_RATE = baud | (baud << 16);
+
+    // Enable USART
+    (*(volatile uint32_t*)((uint32_t)&(USART0_BASE->CONTROL) + (4 << !(1)))) = ((1 << 15) | (1U << 31));
+
+}
+#endif // !defined(USE_TRACE)
+
+
+
+//**************************************************************************************************
+// Flash
+//**************************************************************************************************
 typedef struct flash_reg_map {
    volatile uint32_t  CFGR;
    volatile uint32_t  CFGR_SET;
@@ -424,87 +483,35 @@ void init_flashctrl(void)
     FLASH_BASE->CFGR |= (1 << 6) | 7;
 }
 
-//*****************************************************************************
-//************************************************************************
-static int  Serial_Available(void)
-{
-    return 0x7 & UART1_BASE->FIFOCN;
-}
-
-
-//*****************************************************************************
-/*
- * Read single byte from USART, block if no data available
- */
-static unsigned char recchar(void)
-{
-    //block until char available;
-    while (!(0x7 & UART1_BASE->FIFOCN)) ;
-    return *(volatile uint8_t*)(&UART1_BASE->DATA);
-}
-
-#define MAX_TIME_COUNT  (F_CPU >> 1)
-//*****************************************************************************
-static unsigned char recchar_timeout(void)
-{
-uint32_t count = 0;
-
-    while (!(0x7 & UART1_BASE->FIFOCN))
-    {
-        // wait for data
-        count++;
-        if (count > MAX_TIME_COUNT)
-        {
-
-        unsigned int    data;
-            if (checkUserCode(USER_CODE_FLASH)) {
-                    jumpToUser(USER_CODE_FLASH);
-            }
-            count   =   0;
-        }
-    }
-    return *(volatile uint8_t*)(&UART1_BASE->DATA);
-}
 
 
 
-//*****************************************************************************
+//**************************************************************************************************
+// STK500v2
+//**************************************************************************************************
 void stk500v2(void)
 {
-    address_t       address         =   (address_t)APP_BEGIN;
-    address_t       eraseAddress    =   address;
-    unsigned char   msgParseState;
-    unsigned int    i              =   0;
-    unsigned char   checksum        =   0;
-    unsigned char   seqNum          =   0;
-    unsigned int    msgLength       =   0;
+    address_t       address       = (address_t)APP_BEGIN;
+    address_t       eraseAddress  = address;
+    unsigned int    i             = 0;
+    unsigned char   checksum      = 0;
+    unsigned char   seqNum        = 0;
+    unsigned int    msgLength     = 0;
+    unsigned char   isLeave       = 0;
+    unsigned long   boot_timer    = 0;
+    unsigned int    boot_state    = 0;
+    unsigned long   boot_timeout  = 400000;
+    unsigned int    ctr           = 0;
+
     unsigned char   msgBuffer[1200] __attribute__ ((aligned (2)));
+    unsigned char   msgParseState;
     unsigned char   c, *p;
-    unsigned char   isLeave = 0;
 
-    unsigned long   boot_timeout;
-    unsigned long   boot_timer;
-    unsigned int    boot_state;
-
-    int32_t ctr = 0;
-    boot_timer  =   0;
-    boot_state  =   0;
-    boot_timeout    =   1000000; // 7 seconds , approx 2us per step when optimize "s"
-
-    /*
-     * Branch to bootloader or application code ?
-     */
-
-
-    // init uart0
+    // Init peripherals
     init_uart1();
     init_flashctrl();
     INIT_TRACE();
 
-    TRACE_CHAR('\n');
-    TRACE_CHAR('\r');
-    TRACE_CHAR('\n');
-    TRACE_CHAR('\r');
     while (boot_state==0)
     {
         while ((!(Serial_Available())) && (boot_state == 0))        // wait for data
@@ -528,6 +535,9 @@ void stk500v2(void)
 
     if (boot_state==1)
     {
+        // Trace new line
+        TRACE_CHAR('\n'); TRACE_CHAR('\r');
+        TRACE_CHAR('\n'); TRACE_CHAR('\r');
         for(;;)
         {
             /*
@@ -625,7 +635,7 @@ void stk500v2(void)
             switch (msgBuffer[0])
             {
                 case CMD_SPI_MULTI:
-                TRACE_CHAR('a');
+                TRACE_STRING("CMD_SPI_MULTI");
                 {
                     unsigned char answerByte;
                     unsigned char flag=0;
@@ -670,7 +680,7 @@ void stk500v2(void)
                 break;
 
                 case CMD_SIGN_ON:
-                    TRACE_CHAR('0');
+                    TRACE_STRING("CMD_SIGN_ON");
                     msgLength       =   11;
                     msgBuffer[1]    =   STATUS_CMD_OK;
                     msgBuffer[2]    =   8;
@@ -686,7 +696,7 @@ void stk500v2(void)
                     break;
 
                 case CMD_GET_PARAMETER:
-                    TRACE_CHAR('1');
+                    TRACE_STRING("CMD_GET_PARAMETER");
                     {
                         unsigned char value;
 
@@ -719,17 +729,17 @@ void stk500v2(void)
                     break;
 
                 case CMD_SET_PARAMETER:
-                    TRACE_CHAR('?');
+                    TRACE_SNGL_CHAR('~');
                 case CMD_ENTER_PROGMODE_ISP:
-                    TRACE_CHAR('?');
+                    TRACE_SNGL_CHAR('~');
                 case CMD_LEAVE_PROGMODE_ISP:
-                    TRACE_CHAR('2');
+                    TRACE_STRING("CMD_LEAVE_PROGMODE_ISP");
                     msgLength = 2;
                     msgBuffer[1] = STATUS_CMD_OK;
                     break;
 
                 case CMD_READ_SIGNATURE_ISP:
-                    TRACE_CHAR('3');
+                    TRACE_STRING("CMD_READ_SIGNATURE_ISP");
                     {
                         unsigned char signatureIndex    =   msgBuffer[4];
                         unsigned char signature;
@@ -750,7 +760,7 @@ void stk500v2(void)
                     break;
 
                 case CMD_READ_LOCK_ISP:
-                    TRACE_CHAR('4');
+                    TRACE_STRING("CMD_READ_LOCK_ISP");
                     msgLength       =   4;
                     msgBuffer[1]    =   STATUS_CMD_OK;
                     msgBuffer[2]    =   0;//boot_lock_fuse_bits_get( GET_LOCK_BITS );
@@ -759,7 +769,7 @@ void stk500v2(void)
                     break;
 
                 case CMD_READ_FUSE_ISP:
-                    TRACE_CHAR('5');
+                    TRACE_STRING("CMD_READ_FUSE_ISP");
                     {
                         unsigned char fuseBits;
 
@@ -783,46 +793,35 @@ void stk500v2(void)
                     break;
 
                 case CMD_CHIP_ERASE_ISP:
-                    TRACE_CHAR('6');
+                    TRACE_STRING("CMD_CHIP_ERASE_ISP");
                     eraseAddress    =   APP_BEGIN;
                     msgLength       =   2;
                     msgBuffer[1]    =   STATUS_CMD_OK;
                     break;
 
                 case CMD_LOAD_ADDRESS:
+                    TRACE_STRING("CMD_LOAD_ADDRESS");
+                    {
+                        address =   ( ((address_t)(msgBuffer[1])<<24)|((address_t)(msgBuffer[2])<<16)|((address_t)(msgBuffer[3])<<8)|(msgBuffer[4]) )<<1;
+                        address &= 0x7fffffff;
+                        TRACE_SNGL_CHAR('0');
+                        TRACE_SNGL_CHAR('x');
+                        TRACE_MEM_P(address, 0);
+                        msgLength       =   2;
+                        msgBuffer[1]    =   STATUS_CMD_OK;
 
-                {
-                    uint32_t ld_adr_tmp = 1;
-                    TRACE_SNGL_CHAR('7');
-                    TRACE_SNGL_CHAR(':');
-                    TRACE_SNGL_CHAR(' ');
-                    TRACE_SNGL_CHAR('0');
-                    TRACE_SNGL_CHAR('x');
-                       while (ld_adr_tmp < 5) {
-                           TRACE_SNGL_CHAR((msgBuffer[ld_adr_tmp] >> 4) + ((msgBuffer[ld_adr_tmp] >> 4) > 9 ? 0x31-10: 0) + 0x30);
-                           TRACE_SNGL_CHAR((msgBuffer[ld_adr_tmp] & 0xf) + ((msgBuffer[ld_adr_tmp] & 0xf) > 9 ? 0x31-10: 0) + 0x30);
-
-                          ld_adr_tmp += 1;
-                       }
-                       TRACE_CHAR(' ');
-                    //address =   ( ((address_t)(msgBuffer[1])<<24)|((address_t)(msgBuffer[2])<<16)|((address_t)(msgBuffer[3])<<8)|(msgBuffer[4]) )<<1;
-                    //address = (address_t)APP_BEGIN;
-                    msgLength       =   2;
-                    msgBuffer[1]    =   STATUS_CMD_OK;
-
-                }
+                    }
                     break;
 
                 case CMD_PROGRAM_FLASH_ISP:
-                    TRACE_CHAR('?');
+                    TRACE_SNGL_CHAR('~');
                 case CMD_PROGRAM_EEPROM_ISP:
-                    TRACE_CHAR('8');
+                    TRACE_STRING("CMD_PROGRAM_EEPROM_ISP");
                     {
                         unsigned int    size    =   ((msgBuffer[1])<<8) | msgBuffer[2];
                         unsigned char   *p  =   msgBuffer+10;
                         uint16_t    data;
                         unsigned char   highByte, lowByte;
-                        address_t       tempaddress =   address;
 
 
                         if ( msgBuffer[0] == CMD_PROGRAM_FLASH_ISP )
@@ -833,8 +832,9 @@ void stk500v2(void)
                                 boot_page_erase(eraseAddress);  // Perform page erase
                                 eraseAddress += SPM_PAGESIZE;   // point to next page to be erase
                             }
-
-                            flash_write_data(address, (uint16_t*)p, size / 2);
+                            if (address >= APP_BEGIN) {
+                                flash_write_data(address, (uint16_t*)p, size / 2);
+                            }
                             address += size;
                         }
                         msgLength   =   2;
@@ -843,18 +843,14 @@ void stk500v2(void)
                     break;
 
                 case CMD_READ_FLASH_ISP:
-                    TRACE_CHAR('?');
+                    TRACE_SNGL_CHAR('~');
                 case CMD_READ_EEPROM_ISP:
-                    TRACE_CHAR('9');
+                    TRACE_STRING("CMD_READ_EEPROM_ISP");
                     {
                         unsigned int    size    =   ((msgBuffer[1])<<8) | msgBuffer[2];
                         unsigned char   *p      =   msgBuffer+1;
                         msgLength               =   size+3;
-                        static uint8_t read_state = 0;
-                        if (!read_state) {
-                            address = APP_BEGIN;
-                        }
-                        read_state = 1;
+
                         *p++    =   STATUS_CMD_OK;
                         if (msgBuffer[0] == CMD_READ_FLASH_ISP )
                         {
@@ -863,8 +859,14 @@ void stk500v2(void)
                             // Read FLASH
                             do {
                                 data    =   *(volatile uint16_t *)address;
-                                *p++    =   (unsigned char)data;        //LSB
-                                *p++    =   (unsigned char)(data >> 8); //MSB
+                                if (address < APP_BEGIN) {
+                                    *p++ = 0xff;
+                                    *p++ = 0xff;
+                                }
+                                else {
+                                    *p++    =   (unsigned char)data;        //LSB
+                                    *p++    =   (unsigned char)(data >> 8); //MSB
+                                }
                                 address +=  2;                          // Select next word in memory
                                 size    -=  2;
                             }while (size);
@@ -882,11 +884,10 @@ void stk500v2(void)
                     break;
 
                 default:
-                    TRACE_CHAR('-');
+                    TRACE_STRING("default");
                     TRACE_CHAR((msgBuffer[0] >> 4) + (msgBuffer[0] >> 4 > 9 ? 0x31-10: 0) + 0x30);
                     TRACE_CHAR((msgBuffer[0] & 0xf) + (msgBuffer[0] & 0xf > 9 ? 0x31-10: 0) + 0x30);
 
-                    TRACE_CHAR('-');
                     msgLength       =   2;
                     msgBuffer[1]    =   STATUS_CMD_FAILED;
 
@@ -929,43 +930,3 @@ void stk500v2(void)
 
     return;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
